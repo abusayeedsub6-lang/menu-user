@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #fafafa;
+      color: #222;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 16px;
+      background: #ffffff;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      flex-shrink: 0;
+    }
+    
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .container {
+      flex: 1;
+      overflow-y: hidden;
+      padding: 16px;
+      max-width: 600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .order-summary {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      position: relative;
+    }
+    
+    /* Fade effect overlay for scrollable lists */
+    .order-summary.has-more-items::after {
+      content: '';
+      position: absolute;
+      bottom: 60px; /* Position just above the total section */
+      left: 16px;
+      right: 16px;
+      height: 50px;
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.6) 40%, rgba(255, 255, 255, 0.95) 80%, rgba(255, 255, 255, 1) 100%);
+      pointer-events: none;
+      z-index: 2;
+      border-radius: 0 0 10px 10px;
+    }
+
+    .order-items-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .order-items-wrapper.scrollable {
+      max-height: 270px;
+      overflow-y: auto;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+    }
+    
+    /* Ensure 5th item's border is visible when scrollable */
+    .order-items-wrapper.scrollable .order-item:nth-child(5) {
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .order-items-wrapper.scrollable::-webkit-scrollbar {
+      display: none; /* Chrome, Safari and Opera */
+    }
+
+    .order-summary h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .order-item:last-child {
+      border-bottom: none;
+    }
+
+    .order-item-info {
+      flex: 1;
+    }
+
+    .order-item-info strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .order-item-info span {
+      font-size: 12px;
+      color: #666;
+    }
+
+    .order-item-price {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .total-section {
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 2px solid #eee;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .total-row.final {
+      font-size: 18px;
+      font-weight: bold;
+      color: #ff6b00;
+      margin-top: 8px;
+    }
+
+    .payment-methods {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    .payment-methods h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .payment-option {
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      margin-bottom: 8px;
+      border: 2px solid #eee;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: #fff;
+    }
+
+    .payment-option-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .payment-option.selected[data-payment="upi"] .payment-option-header {
+      display: none;
+    }
+
+    .payment-option:hover:not(.selected) {
+      border-color: #ddd;
+      background: #f9f9f9;
+    }
+
+    .payment-option input[type="radio"] {
+      order: 2;
+      margin-left: 12px;
+      margin-right: 0;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: #ff6b00;
+    }
+
+    .payment-option:not(.selected) {
+      border-color: #eee !important;
+      background: #fff !important;
+    }
+
+    .payment-option label {
+      order: 1;
+      flex: 1;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .payment-option.selected {
+      border-color: #ff6b00;
+      background: #fff5f0;
+    }
+
+    .upi-apps {
+      display: none;
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+      width: 100%;
+    }
+
+    .upi-apps.show {
+      display: flex;
+      gap: 8px;
+      justify-content: space-between;
+      width: 100%;
+      margin-top: 0;
+      padding-top: 0;
+    }
+
+    .upi-app-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 8px 6px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      color: #222;
+      background: #fff;
+    }
+
+    .upi-app-option:hover {
+      border-color: #ff6b00;
+      background: #fff5f0;
+      transform: translateY(-2px);
+    }
+
+    .upi-app-icon {
+      width: 8px;
+      height: 8px;
+      margin-bottom: 4px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4px;
+    }
+
+    .upi-app-name {
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    .pay-btn {
+      width: 100%;
+      padding: 14px;
+      background: #ff6b00;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.1s ease;
+      margin-top: 16px;
+      
+    }
+
+    .pay-btn:hover {
+      background: #ff7a1a;
+    }
+
+    .pay-btn:active {
+      transform: scale(0.98);
+    }
+
+    .pay-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .empty-cart {
+      text-align: center;
+      padding: 40px 20px;
+      color: #666;
+    }
+
+    .empty-cart p {
+      margin: 12px 0;
+    }
+
+    .back-btn {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 10px 20px;
+      background: #ff6b00;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Payment</h1>
+</header>
+
+<div class="container">
+  <div id="orderSummary" class="order-summary"></div>
+  <div id="paymentMethods" class="payment-methods"></div>
+</div>
+
+<script>
+  function renderOrderSummary() {
+    const cart = JSON.parse(localStorage.getItem('cart')) || {};
+    const summaryDiv = document.getElementById('orderSummary');
+    const paymentDiv = document.getElementById('paymentMethods');
+    const payBtn = document.getElementById('payBtn');
+
+    if (Object.keys(cart).length === 0) {
+      summaryDiv.innerHTML = `
+        <div class="empty-cart">
+          <p>Your cart is empty</p>
+          <a href="cart.html" class="back-btn">Back to Cart</a>
+        </div>
+      `;
+      paymentDiv.style.display = 'none';
+      payBtn.style.display = 'none';
+      return;
+    }
+
+    let subtotal = 0;
+
+    // Check if items are more than 5 to make it scrollable
+    const itemCount = Object.keys(cart).length;
+    const itemsWrapperClass = itemCount > 5 ? 'order-items-wrapper scrollable' : 'order-items-wrapper';
+    const hasMoreItems = itemCount > 5;
+
+    let html = `<h2>Order Summary</h2><div class="${itemsWrapperClass}">`;
+    
+    Object.values(cart).forEach(item => {
+      const price = parseFloat(item.price.replace('₹', '').replace(',', ''));
+      const itemTotal = price * item.qty;
+      subtotal += itemTotal;
+
+      html += `
+        <div class="order-item">
+          <div class="order-item-info">
+            <strong>${item.name}</strong>
+            <span>Qty: ${item.qty} × ${item.price}</span>
+          </div>
+          <div class="order-item-price">₹${itemTotal.toFixed(2)}</div>
+        </div>
+      `;
+    });
+
+    const total = subtotal;
+
+    html += `</div>
+      <div class="total-section">
+        <div class="total-row final">
+          <span>Total</span>
+          <span>₹${total.toFixed(2)}</span>
+        </div>
+      </div>
+    `;
+
+    summaryDiv.innerHTML = html;
+    
+    // Add class to show fade effect when there are more than 5 items
+    if (hasMoreItems) {
+      summaryDiv.classList.add('has-more-items');
+      
+      // Handle scroll to show/hide fade effect dynamically
+      const scrollableWrapper = summaryDiv.querySelector('.order-items-wrapper.scrollable');
+      if (scrollableWrapper) {
+        const updateFadeEffect = () => {
+          const scrollTop = scrollableWrapper.scrollTop;
+          const scrollHeight = scrollableWrapper.scrollHeight;
+          const clientHeight = scrollableWrapper.clientHeight;
+          const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5; // 5px threshold
+          
+          // Hide fade when scrolled to bottom, show when there's more content
+          if (isAtBottom) {
+            summaryDiv.classList.remove('has-more-items');
+          } else {
+            summaryDiv.classList.add('has-more-items');
+          }
+        };
+        
+        scrollableWrapper.addEventListener('scroll', updateFadeEffect);
+        updateFadeEffect(); // Initial check
+      }
+    } else {
+      summaryDiv.classList.remove('has-more-items');
+    }
+  }
+
+  function renderPaymentMethods() {
+    const paymentDiv = document.getElementById('paymentMethods');
+    paymentDiv.innerHTML = `
+      <h2>Select Payment Method</h2>
+      <div class="payment-option" onclick="selectPayment(this, 'qr', event)">
+        <div class="payment-option-header">
+          <input type="radio" name="payment" id="qr" value="qr">
+          <label for="qr">📱 QR Code</label>
+        </div>
+      </div>
+      <div class="payment-option" data-payment="upi" onclick="selectPayment(this, 'upi', event)">
+        <div class="payment-option-header">
+          <input type="radio" name="payment" id="upi" value="upi">
+          <label for="upi">📱 UPI</label>
+        </div>
+        <div class="upi-apps" id="upiApps">
+          <a href="phonepe://pay" class="upi-app-option" onclick="handleUpiPayment(event, 'phonepe')">
+            <div class="upi-app-icon" style="background: #5f259f; color: white;">📱</div>
+            <div class="upi-app-name">PhonePe</div>
+          </a>
+          <a href="tez://pay" class="upi-app-option" onclick="handleUpiPayment(event, 'gpay')">
+            <div class="upi-app-icon" style="background: #4285f4; color: white;">💳</div>
+            <div class="upi-app-name">GPay</div>
+          </a>
+          <a href="paytmmp://pay" class="upi-app-option" onclick="handleUpiPayment(event, 'paytm')">
+            <div class="upi-app-icon" style="background: #00baf2; color: white;">💰</div>
+            <div class="upi-app-name">Paytm</div>
+          </a>
+        </div>
+      </div>
+      <div class="payment-option" onclick="selectPayment(this, 'cash', event)">
+        <div class="payment-option-header">
+          <input type="radio" name="payment" id="cash" value="cash">
+          <label for="cash">💵 Cash </label>
+        </div>
+      </div>
+      <button class="pay-btn" id="payBtn" onclick="processPayment()">Pay Now</button>
+    `;
+  }
+
+  function selectPayment(element, value, event) {
+    // Prevent event bubbling when clicking on UPI apps
+    if (event && event.target && event.target.closest('.upi-app-option')) {
+      return;
+    }
+    
+    // Remove selected state from all options
+    document.querySelectorAll('.payment-option').forEach(opt => {
+      opt.classList.remove('selected');
+      const input = opt.querySelector('input');
+      if (input) input.checked = false;
+      
+      // Hide all UPI apps
+      const upiApps = opt.querySelector('.upi-apps');
+      if (upiApps) {
+        upiApps.classList.remove('show');
+      }
+    });
+    
+    // Add selected state to clicked option
+    element.classList.add('selected');
+    const input = element.querySelector('input');
+    if (input) input.checked = true;
+    
+    // Show UPI apps if UPI is selected
+    if (value === 'upi') {
+      const upiApps = element.querySelector('.upi-apps');
+      if (upiApps) {
+        upiApps.classList.add('show');
+      }
+    }
+  }
+
+  function handleUpiPayment(event, appName) {
+    event.preventDefault();
+    event.stopPropagation(); // Prevent triggering the parent payment option click
+    const cart = JSON.parse(localStorage.getItem('cart')) || {};
+    
+    if (Object.keys(cart).length === 0) {
+      alert('Your cart is empty');
+      return;
+    }
+
+    // Calculate total
+    let subtotal = 0;
+    Object.values(cart).forEach(item => {
+      const price = parseFloat(item.price.replace('₹', '').replace(',', ''));
+      subtotal += price * item.qty;
+    });
+    const total = subtotal.toFixed(2);
+
+    // UPI merchant details (you can update these with your actual UPI ID)
+    const upiId = 'merchant@paytm'; // Replace with your actual UPI ID
+    const merchantName = 'Menu Mate';
+    
+    // Format amount for UPI (should be a string with 2 decimal places)
+    const amount = total;
+
+    // Create UPI deep link URLs for each app
+    let appUrl = '';
+    switch(appName) {
+      case 'phonepe':
+        // PhonePe UPI deep link
+        appUrl = `phonepe://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR&tn=${encodeURIComponent('Menu Mate Order')}`;
+        break;
+      case 'gpay':
+        // Google Pay UPI deep link
+        appUrl = `gpay://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR&tn=${encodeURIComponent('Menu Mate Order')}`;
+        break;
+      case 'paytm':
+        // Paytm UPI deep link
+        appUrl = `paytmmp://pay?pa=${upiId}&pn=${encodeURIComponent(merchantName)}&am=${amount}&cu=INR&tn=${encodeURIComponent('Menu Mate Order')}`;
+        break;
+    }
+
+    // Redirect to the UPI app
+    if (appUrl) {
+      // Try to open the app
+      window.location.href = appUrl;
+      
+      // Store payment info for later verification
+      localStorage.setItem('pendingPayment', JSON.stringify({
+        method: appName,
+        amount: amount,
+        timestamp: new Date().toISOString()
+      }));
+    }
+  }
+
+  function processPayment() {
+    const selectedPayment = document.querySelector('input[name="payment"]:checked');
+    if (!selectedPayment) {
+      alert('Please select a payment method');
+      return;
+    }
+
+    const paymentMethod = selectedPayment.value;
+    const cart = JSON.parse(localStorage.getItem('cart')) || {};
+    
+    if (Object.keys(cart).length === 0) {
+      alert('Your cart is empty');
+      return;
+    }
+
+    // If UPI is selected, show message to select an app
+    if (paymentMethod === 'upi') {
+      alert('Please select a UPI app (PhonePe, Google Pay, or Paytm)');
+      return;
+    }
+
+    // Calculate total
+    let subtotal = 0;
+    Object.values(cart).forEach(item => {
+      const price = parseFloat(item.price.replace('₹', '').replace(',', ''));
+      subtotal += price * item.qty;
+    });
+    const total = subtotal;
+
+    // Simulate payment processing
+    const payBtn = document.getElementById('payBtn');
+    payBtn.disabled = true;
+    payBtn.textContent = 'Processing...';
+
+    setTimeout(() => {
+      // Clear cart after successful payment
+      localStorage.removeItem('cart');
+      alert(`Order placed successfully!\nPayment Method: ${paymentMethod}\nTotal Amount: ₹${total.toFixed(2)}\n\nThank you for your order!`);
+      window.location.href = '../Index.html';
+    }, 2000);
+  }
+
+  // Initialize
+  renderOrderSummary();
+  renderPaymentMethods();
+</script>
+
+</body>
+</html>
+

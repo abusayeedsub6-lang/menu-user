@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Digital Menu</title>
+  <style>
+    /* Smooth scroll must be on the scrolling container, not html */
+    
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #fafafa;
+      color: #222;
+      height: 100vh;
+      overflow: hidden; /* stop body scroll so header never moves */
+    }
+
+    /* ===== HEADER (same size everywhere) ===== */
+    header {
+      padding: 16px;
+      text-align: center;
+      background: #ffffff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      position: sticky; /* frozen header */
+      top: 0;
+      z-index: 1000;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+    header p {
+      margin: 4px 0 0;
+      font-size: 14px;
+      color: #666;
+    }
+
+    /* Kart button in header */
+    .kart-btn {
+      position: absolute;
+      right: 5px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #ff6b00;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 4px 5px;
+      font-size: 12px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .cart-badge {
+      background: #dc2626;
+      color: #fff;
+      border-radius: 50%;
+      min-width: 18px;
+      height: 18px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    /* ===== TOP BUTTONS ===== */
+    .filters {
+      position: sticky;
+      top: 72px;
+      z-index: 900;
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      background: #fafafa;
+      scroll-snap-type: x mandatory;
+    }
+    .filters::-webkit-scrollbar { display: none; }
+    .filter {
+      position: relative;
+      z-index: 1;
+      scroll-snap-align: center;
+      background: transparent;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 13px;
+      border: 1px solid #eee;
+      white-space: nowrap;
+      text-decoration: none;
+      color: #222;
+      cursor: pointer;
+    }
+
+    .filter.active { color: #fff; border-color: transparent; }
+    .filter {
+      background: #fff;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 13px;
+      border: 1px solid #eee;
+      white-space: nowrap;
+      text-decoration: none;
+      color: #222;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.1s ease;
+    }
+
+    .filter.active {
+      background: #ff6b00;
+      color: #fff;
+      border-color: #ff6b00;
+    }
+
+    .filter:hover {
+      background: #f3f4f6;
+    }
+
+    .filter:active {
+      transform: scale(0.96);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+      background: #e5e7eb;
+    }
+
+    /* ===== CATEGORY (same size as Starters) ===== */
+    .category {
+      padding: 12px;
+    }
+    .category h2 {
+      font-size: 18px;
+      margin: 0 0 8px;
+    }
+
+    /* ===== DISH CARD (fixed size) ===== */
+    .dish {
+      display: flex;
+      gap: 8px;
+      padding: 6px;
+      background: #fff;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      min-height: 65px; /* compact dish cards (65px requested) */
+      align-items: center;
+      box-sizing: border-box;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      transition: box-shadow 150ms ease, transform 150ms ease;
+    }
+
+    .dish:hover {
+      box-shadow: 0 6px 14px rgba(0,0,0,0.07);
+      transform: translateY(-1px);
+    }
+
+    .dish img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+
+    .dish-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .dish-info h3 {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.1;
+    }
+
+    .dish-info p {
+      margin: 3px 0;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .dish-info span {
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* Add to cart button – on the right side */
+    .add-cart {
+      background: #ff6b00;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      width: 78px;
+      height: 24px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s ease;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .add-cart:hover {
+      background: #ff7a1a;
+    }
+
+    .add-cart:active {
+      transform: scale(0.95);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .add-cart.added {
+      background: #16a34a;
+    }
+
+    .dish-controls {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+    }
+
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .qty-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: none;
+      background: #ff6b00;
+      color: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qty-number {
+      min-width: 18px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 12px;      flex: 0 0 auto;
+      margin: 0 auto;    }
+
+    
+
+    footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 13px;
+      color: #666;
+      background: #fafafa;
+    }
+
+    .menu {
+      overflow-y: auto;
+      height: calc(100vh - 140px);
+      padding-bottom: 16px;
+      scroll-behavior: smooth;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+    }
+
+    .menu::-webkit-scrollbar {
+      display: none; /* Chrome, Safari and Opera */
+    }
+  
+/* ================= RESPONSIVE FIXES (Mobile + Tablet First) ================= */
+@media (max-width: 1024px) {
+  header {
+    padding: 12px;
+  }
+
+  header h1 {
+    font-size: 18px;
+  }
+
+  header p {
+    font-size: 13px;
+  }
+
+  .kart-btn {
+    right: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .filters {
+    top: 64px;
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .menu {
+    height: calc(100vh - 120px);
+  }
+}
+
+@media (max-width: 768px) {
+  .filters {
+    top: 60px;
+  }
+
+  .filter {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+
+  .category {
+    padding: 10px;
+  }
+
+  .category h2 {
+    font-size: 16px;
+  }
+
+  .dish {
+    gap: 10px;
+    min-height: 65px;
+  }
+
+  .dish img {
+    width: 60px;
+    height: 60px;
+  }
+
+  .dish-info h3 {
+    font-size: 14px;
+  }
+
+  .dish-info p {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  header {
+    padding: 10px;
+  }
+
+  header h1 {
+    font-size: 16px;
+  }
+
+  header p {
+    font-size: 12px;
+  }
+
+  .filters {
+    top: 56px;
+  }
+
+  .menu {
+    height: calc(100vh - 112px);
+  }
+
+  .dish {
+    min-height: 65px;
+  }
+
+  .dish img {
+    width: 60px;
+    height: 60px;
+  }
+
+  .add-cart {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+
+
+  .dish img {
+    width: 60px;
+    height: 60px;
+  }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>The Geno Abu</h1>
+  <p>Order easily with food photos</p>
+  <a href="user_compo/cart.html" class="kart-btn">🛒 Kart <span id="cartCount" class="cart-badge" style="display:none">0</span></a>
+</header>
+
+<div class="filters" id="filters"> 
+</div>
+
+<div class="menu" id="menu"></div>
+
+
+<script>
+  /* ================= DYNAMIC MENU RENDERING ================= */
+  const menuEl = document.getElementById('menu');
+  const filtersEl = document.getElementById('filters');
+
+  function getCategories() {
+    let categories = JSON.parse(localStorage.getItem('categories')) || [];
+    // If no categories exist but menu items do, initialize from menu
+    if (categories.length === 0) {
+      const menu = JSON.parse(localStorage.getItem('menu')) || [];
+      const menuCategories = [...new Set(menu.map(d => d.category).filter(Boolean))];
+      if (menuCategories.length > 0) {
+        categories = menuCategories;
+        localStorage.setItem('categories', JSON.stringify(categories));
+      }
+    }
+    return categories;
+  }
+
+  function getCategoryId(category) {
+    return category.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+  }
+
+  function renderFilters() {
+    const categories = getCategories();
+    filtersEl.innerHTML = '';
+    
+    categories.forEach(category => {
+      const link = document.createElement('a');
+      link.href = '#' + getCategoryId(category);
+      link.className = 'filter';
+      link.innerText = category;
+      filtersEl.appendChild(link);
+    });
+  }
+
+  function renderMenu() {
+    const menu = JSON.parse(localStorage.getItem('menu')) || [];
+    const categories = getCategories();
+    menuEl.innerHTML = '';
+
+    categories.forEach(category => {
+      const dishes = menu.filter(d => d.category === category);
+      if (dishes.length === 0) return;
+
+      const categoryId = getCategoryId(category);
+      const categoryDiv = document.createElement('div');
+      categoryDiv.className = 'category';
+      categoryDiv.id = categoryId;
+
+      const heading = document.createElement('h2');
+      heading.innerText = category;
+      categoryDiv.appendChild(heading);
+
+      dishes.forEach(dish => {
+        const dishDiv = document.createElement('div');
+        dishDiv.className = 'dish';
+        dishDiv.innerHTML = `
+          <img src="${dish.image}" alt="${dish.name}">
+          <div class="dish-info">
+            <h3>${dish.name}</h3>
+            <p>${dish.description || ''}</p>
+            <span>₹${dish.price}</span>
+          </div>
+        `;
+        // append a controls container on the right (will hold button or qty control)
+        const controls = document.createElement('div');
+        controls.className = 'dish-controls';
+        
+        // create Add to cart button and add to controls
+        const btn = document.createElement('button');
+        btn.className = 'add-cart';
+        btn.innerText = 'Add to cart';
+        btn.onclick = function() { addToCart(this); };
+        controls.appendChild(btn);
+        
+        dishDiv.appendChild(controls);
+        categoryDiv.appendChild(dishDiv);
+
+        // set initial state based on cart
+        const cart = JSON.parse(localStorage.getItem('cart')) || {};
+        if (cart[dish.name]) {
+          btn.style.display = 'none';
+          renderQtyControls(controls, dish.name, cart[dish.name].qty);
+        }
+      });
+
+      menuEl.appendChild(categoryDiv);
+    });
+
+    renderFilters();
+    setupScrollSpy();
+  }
+
+  /* ================= CART ================= */
+  function addToCart(btn) {
+    const dish = btn.closest('.dish');
+    const name = dish.querySelector('h3').innerText;
+    const price = dish.querySelector('span').innerText;
+    const image = dish.querySelector('img').src;
+
+    let cart = JSON.parse(localStorage.getItem('cart')) || {};
+
+    if (cart[name]) {
+      cart[name].qty += 1;
+    } else {
+      cart[name] = { name, price, image, qty: 1 };
+    }
+
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCartCount();
+    // replace add button with qty controls on the right
+    try {
+      const dishEl = btn.closest('.dish');
+      btn.style.display = 'none';
+      const controls = dishEl.querySelector('.dish-controls') || (() => { const c = document.createElement('div'); c.className='dish-controls'; dishEl.appendChild(c); return c; })();
+      renderQtyControls(controls, name, cart[name].qty);
+    } catch (e) { console.error(e); }
+  }
+
+  function renderQtyControls(container, name, qty) {
+    // remove existing qty-controls div if present, but keep the button
+    const existingQty = container.querySelector('.qty-controls');
+    if (existingQty) existingQty.remove();
+    
+    // hide the button
+    const btn = container.querySelector('.add-cart');
+    if (btn) btn.style.display = 'none';
+    
+    const wrap = document.createElement('div');
+    wrap.className = 'qty-controls';
+
+    const minus = document.createElement('button');
+    minus.className = 'qty-btn minus';
+    minus.innerText = '−';
+
+    const num = document.createElement('span');
+    num.className = 'qty-number';
+    num.innerText = qty;
+
+    const plus = document.createElement('button');
+    plus.className = 'qty-btn plus';
+    plus.innerText = '+';
+
+    wrap.appendChild(minus);
+    wrap.appendChild(num);
+    wrap.appendChild(plus);
+
+    container.appendChild(wrap);
+
+    minus.addEventListener('click', () => changeQty(name, -1, container));
+    plus.addEventListener('click', () => changeQty(name, 1, container));
+  }
+
+  function changeQty(name, delta, container) {
+    const cart = JSON.parse(localStorage.getItem('cart')) || {};
+    if (!cart[name]) return;
+    cart[name].qty += delta;
+    if (cart[name].qty < 1) {
+      delete cart[name];
+      localStorage.setItem('cart', JSON.stringify(cart));
+      // remove qty controls and show button again
+      const qtyWrap = container.querySelector('.qty-controls');
+      if (qtyWrap) qtyWrap.remove();
+      const btn = container.querySelector('.add-cart');
+      if (btn) btn.style.display = 'block';
+    } else {
+      localStorage.setItem('cart', JSON.stringify(cart));
+      // update shown number
+      if (container) {
+        const num = container.querySelector('.qty-number');
+        if (num) num.innerText = cart[name].qty;
+      }
+    }
+    updateCartCount();
+  }
+
+  function updateCartCount() {
+    const cart = JSON.parse(localStorage.getItem('cart')) || {};
+    const count = Object.keys(cart).length;
+    const badge = document.getElementById('cartCount');
+    if (count > 0) {
+      badge.style.display = 'flex';
+      badge.innerText = count;
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  /* ================= CATEGORY CLICK SCROLL (ROBUST) ================= */
+  function setupScrollSpy() {
+    const sections = document.querySelectorAll('.category');
+    const filterLinks = document.querySelectorAll('.filter');
+    let activeId = null;
+
+    filterLinks.forEach(link => {
+      // Remove existing listeners by cloning
+      const newLink = link.cloneNode(true);
+      link.parentNode.replaceChild(newLink, link);
+      
+      newLink.addEventListener('click', e => {
+        e.preventDefault();
+        const targetId = newLink.getAttribute('href').slice(1);
+        const targetSection = document.getElementById(targetId);
+        if (!targetSection) return;
+
+        const headerHeight = document.querySelector('header').offsetHeight;
+        const filtersHeight = document.getElementById('filters').offsetHeight;
+        const offset = headerHeight + filtersHeight;
+
+        const targetTop = targetSection.offsetTop - offset;
+
+        menuEl.scrollTo({
+          top: Math.max(targetTop, 0),
+          behavior: 'smooth'
+        });
+      });
+    });
+
+    const observer = new IntersectionObserver(
+      entries => {
+        entries
+          .filter(e => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)
+          .slice(0, 1)
+          .forEach(entry => {
+            const id = entry.target.id;
+            if (id !== activeId) {
+              activeId = id;
+              document.querySelectorAll('.filter').forEach(link => {
+                link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+              });
+            }
+          });
+      },
+      { threshold: [0.35, 0.6], rootMargin: '-120px 0px -50% 0px' }
+    );
+
+    sections.forEach(section => observer.observe(section));
+  }
+
+  // Initial render
+  renderMenu();
+  updateCartCount();
+
+  // Listen for storage changes (when admin updates menu or categories)
+  window.addEventListener('storage', () => {
+    renderMenu();
+    updateCartCount();
+  });
+
+  // Also listen for custom storage events (same-tab updates)
+  window.addEventListener('categoriesUpdated', () => {
+    renderMenu();
+    updateCartCount();
+  });
+</script>
+
+</body>
+</html>
